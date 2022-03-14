@@ -21,11 +21,18 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.coroutineScope
 import androidx.navigation.fragment.findNavController
+import com.example.forage.BaseApplication
 import com.example.forage.R
 import com.example.forage.databinding.FragmentForageableListBinding
 import com.example.forage.ui.adapter.ForageableListAdapter
 import com.example.forage.ui.viewmodel.ForageableViewModel
+import com.example.forage.ui.viewmodel.ForageableViewModelFactory
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+
 
 /**
  * A fragment to view the list of [Forageable]s stored in the database.
@@ -37,7 +44,11 @@ class ForageableListFragment : Fragment() {
     // TODO: Refactor the creation of the view model to take an instance of
     //  ForageableViewModelFactory. The factory should take an instance of the Database retrieved
     //  from BaseApplication
-    private val viewModel: ForageableViewModel by activityViewModels()
+    private val viewModel: ForageableViewModel by activityViewModels() {
+        ForageableViewModelFactory(
+            (activity?.application as BaseApplication).database.foragableDao()
+        )
+    }
 
     private var _binding: FragmentForageableListBinding? = null
 
@@ -67,6 +78,11 @@ class ForageableListFragment : Fragment() {
 
         binding.apply {
             recyclerView.adapter = adapter
+            lifecycle.coroutineScope.launch {
+                viewModel.allForageables().observe(viewLifecycleOwner) {
+                    adapter.submitList(it)
+                }
+            }
             addForageableFab.setOnClickListener {
                 findNavController().navigate(
                     R.id.action_forageableListFragment_to_addForageableFragment
